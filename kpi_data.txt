@@ -1,0 +1,3 @@
+total_games:22
+avg_temp:12.3
+total_hr:15

@@ -1,0 +1,3 @@
+total_games:164
+avg_temp:21.9 °C
+total_hr:953

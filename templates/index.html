@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚾️ 2019 KBO 날씨 대시보드</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+        /* 팀별 색상 변수 정의 */
+        :root {
+            --team-OB: navy;
+            --team-WO: darkred;
+            --team-SK: red;
+            --team-LG: black;
+            --team-NC: skyblue;
+            --team-KT: black;
+            --team-HT: red;
+            --team-SS: blue;
+            --team-HH: orange;
+            --team-LT: orange;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; color: #333; }
+        .kpi-container { display: flex; justify-content: space-around; margin-bottom: 30px; text-align: center; }
+        .kpi-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex: 1; margin: 0 10px; }
+        .kpi-value { font-size: 2em; font-weight: bold; color: #007bff; }
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .chart-item { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; height: 500px; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .team-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+        .team-links a { text-decoration: none; color: inherit; }
+        .team-links .kpi-box { flex-grow: 1; }
+        .team-logo { /* 로고 이미지 크기 */
+            width: 60px; /* 로고 이미지 크기 */
+            height: 60px;
+            /* margin-right: 10px; 로고와 텍스트 사이 간격 */
+            vertical-align: middle; /* 이미지와 텍스트 세로 정렬 */
+        }
+
+        /* 기본 선택 스타일 */
+        .selected { border: 2px solid #007bff; }
+
+        /* 각 팀별 선택 스타일 */
+        .selected.team-OB { border-color: var(--team-OB); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-OB) 30%, transparent); }
+        .selected.team-WO { border-color: var(--team-WO); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-WO) 30%, transparent); }
+        .selected.team-SK { border-color: var(--team-SK); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-SK) 30%, transparent); }
+        .selected.team-LG { border-color: var(--team-LG); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-LG) 30%, transparent); }
+        .selected.team-NC { border-color: var(--team-NC); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-NC) 30%, transparent); }
+        .selected.team-KT { border-color: var(--team-KT); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-KT) 30%, transparent); }
+        .selected.team-HT { border-color: var(--team-HT); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-HT) 30%, transparent); }
+        .selected.team-SS { border-color: var(--team-SS); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-SS) 30%, transparent); }
+        .selected.team-HH { border-color: var(--team-HH); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-HH) 30%, transparent); }
+        .selected.team-LT { border-color: var(--team-LT); box-shadow: 0 4px 8px color-mix(in srgb, var(--team-LT) 30%, transparent); }
+
+        /* 차트 스타일 */
+        .chart-container { width: 100%; margin-bottom: 20px; }
+        .chart-container iframe { width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 8px; }
+
+        /* 팀 링크 스타일 조정 */
+        .team-links a { font-size: 0.9em; } /* 글자 크기 줄임 */
+        .team-links .kpi-box { padding: 10px; } /* 패딩 줄임 */
+
+        /* 팀 순위 지표 스타일 */
+        .rank-indicator { display: flex; align-items: center; justify-content: flex-start; }
+        .rank-indicator .rank { font-size: 1.2em; font-weight: bold; margin-right: 15px; min-width: 20px; text-align: center;}
+        .rank-indicator .team-logo { width: 50px; height: 50px; margin-right: 10px; }
+        .rank-indicator .team-name { font-weight: bold; margin-right: auto; }
+        .rank-indicator .win-rate { font-size: 1.1em; font-weight: bold; color: #007bff; }
+
+        /* 상대 전적 지표 스타일 */
+        .head-to-head-container { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+        .opponent-list .kpi-box { display: flex; align-items: center; gap: 15px; }
+        .opponent-list .team-logo { width: 25px; height: 25px; }
+        .opponent-list .team-name { font-weight: bold; flex-grow: 1; }
+        .opponent-list .record { font-size: 0.9em; color: #555; }
+        .opponent-list .win-rate { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚾️ 2019 KBO 날씨 및 경기 분석
+            {% if selected_team_id == 'strong' %}
+            (강팀)
+            {% elif selected_team_id == 'weak' %}
+            (약팀)
+            {% elif selected_team_info %}
+            ({{ selected_team_info.name }})
+            {% else %}
+            (전체)
+            {% endif %}
+        </h1>
+
+        <h2>팀별 분석</h2>
+        <div class="team-links kpi-container">
+            <a href="/" class="kpi-box {% if not selected_team_id %}selected{% endif %}">전체 보기</a>
+            {% for id, team_info in team_links.items() %}
+            <a href="/?team={{ id }}" class="kpi-box {% if id == selected_team_id %}selected team-{{ id }}{% endif %}">
+                <img src="{{ url_for('static', filename=team_info.logo) }}" alt="{{ team_info.name }} 로고" class="team-logo">{{ team_info.name }}
+            </a>
+            {% endfor %}
+        </div>
+        <hr style="margin: 30px 0;">
+        
+        <!-- 월별 필터 (팀 선택 시에만 표시) -->
+        {% if selected_team_id %}
+        <div style="text-align: right; margin-bottom: 20px;">
+            <form id="month-filter-form" method="get">
+                <input type="hidden" name="team" value="{{ selected_team_id }}">
+                <label for="month-select">기간 선택: </label>
+                <select name="month" id="month-select" onchange="this.form.submit()">
+                    <option value="" {% if not selected_month %}selected{% endif %}>전체</option>
+                    {% for m in available_months %}<option value="{{ m }}" {% if selected_month and m == selected_month|int %}selected{% endif %}>{{ m }}월</option>{% endfor %}
+                </select>
+            </form>
+        </div>
+        {% endif %}
+
+        <h2>주요 지표 (KPIs)</h2>
+        <div class="kpi-container">
+            <div class="kpi-box">
+                <div class="kpi-label">총 경기 수</div>
+                <div class="kpi-value">{{ kpi.total_games }}</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-label">경기 시간대 평균 기온</div>
+                <div class="kpi-value">{{ kpi.avg_temp }}</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-label">총 홈런 수</div>
+                <div class="kpi-value">{{ kpi.total_hr }}</div>
+            </div>
+        </div>
+
+        <h2>시각화 분석</h2>
+        <div class="chart-grid">
+            <div class="chart-item">
+                {{ charts.main_chart|safe }}
+            </div>
+            <!-- 팀별 분석 차트 -->
+            {% if charts.monthly_chart %}
+            <div class="chart-item">
+                {{ charts.monthly_chart|safe }}
+            </div>
+            {% endif %}
+            <!-- 경기력 지표 상관관계 차트 -->
+            {% if charts.correlation_chart %}
+            <div class="chart-item" style="height: auto; padding: 20px;">
+                <!-- 월별 필터는 위로 이동 -->
+                <div style="height: 500px;">
+                    {{ charts.correlation_chart|safe }}
+                </div>
+            </div>
+            {% endif %}
+            <!-- 강팀/약팀 비교 차트 -->
+            {% if charts.strength_avg_chart %}
+            <div class="chart-item">
+                {{ charts.strength_avg_chart|safe }}
+            </div>
+            {% endif %}
+            {% if charts.strength_hr_chart %}
+            <div class="chart-item">
+                {{ charts.strength_hr_chart|safe }}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 팀별 분석: 상대 전적 TOP 3 -->
+        {% if charts.strong_opponents and charts.weak_opponents %}
+        <div class="head-to-head-container">
+            <div class="opponent-list">
+                <h3>상대적으로 강한 팀 TOP 3</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for team in charts.strong_opponents %}
+                    <div class="kpi-box">
+                        <img src="{{ url_for('static', filename=team.logo) }}" alt="{{ team.name }} 로고" class="team-logo">
+                        <span class="team-name">{{ team.name }}</span>
+                        <span class="record">{{ team.record }}</span>
+                        <span class="win-rate" style="color: green;">{{ team.win_rate }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="opponent-list">
+                <h3>상대적으로 약한 팀 TOP 3</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for team in charts.weak_opponents %}
+                    <div class="kpi-box">
+                        <img src="{{ url_for('static', filename=team.logo) }}" alt="{{ team.name }} 로고" class="team-logo">
+                        <span class="team-name">{{ team.name }}</span>
+                        <span class="record">{{ team.record }}</span>
+                        <span class="win-rate" style="color: red;">{{ team.win_rate }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 전체 보기: 팀 순위 지표 -->
+        {% if not selected_team_id and charts.team_rankings %}
+        <div style="margin-top: 40px;">
+            <h2>팀별 승률 순위</h2>
+            <div class="kpi-container" style="flex-direction: column; gap: 10px;">
+                {% for team in charts.team_rankings %}
+                <div class="kpi-box">
+                    <div class="rank-indicator">
+                        <span class="rank">{{ team.rank }}</span>
+                        <img src="{{ url_for('static', filename=team.logo) }}" alt="{{ team.name }} 로고" class="team-logo">
+                        <span class="team-name">{{ team.name }}</span>
+                        <span class="win-rate">{{ team.win_rate }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>
